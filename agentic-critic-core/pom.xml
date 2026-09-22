@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.agentcritic</groupId>
+        <artifactId>agent-critic</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>agentic-critic-core</artifactId>
+    <name>agentic-critic-core</name>
+    <description>评测核心框架：domain / evaluator / judge / metric / repository 抽象</description>
+
+    <dependencies>
+        <!-- Spring 基础（context / 注解） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Spring AI ChatClient 抽象（Judge 打分用，具体模型由 starter 装配）
+             版本对齐 Travel-Hub 实际解析到的 1.1.2（1.1.3 的默认 WebClient 带 ~10s responseTimeout，
+             会导致 DeepSeek 慢响应 ReadTimeoutException；1.1.2 无此默认） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-client-chat</artifactId>
+            <version>1.1.2</version>
+        </dependency>
+
+        <!-- 工具 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>

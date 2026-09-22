@@ -1,0 +1,76 @@
+# ============================================================
+# AgentCritic 配置文件
+# ⚠️ 此文件包含敏感信息，切勿提交到公开仓库！
+# ============================================================
+
+server:
+  port: 8081
+
+# ── 模型路由器：引用路径格式 {provider}.models.{modelKey} ──
+# Judge 与被测模型不同（避免自我偏置），M1 只有 judge 角色
+agent-model:
+  judge: qwen.models.qwen3.7-max
+
+# ── 各 provider 渠道（OpenAI 兼容端点）──
+qwen:
+  api-key: sk-xxx
+  endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1
+  models:
+    qwen3.7-max: qwen3.7-max
+
+deepseek:
+  api-key: sk-xxx
+  endpoint: https://api.deepseek.com/v1
+  models:
+    deepseek-chat: deepseek-chat
+
+# ==================== Spring ====================
+spring:
+  profiles:
+    active: dev
+  application:
+    name: agentic-critic
+
+  # WebFlux 应用（spring-boot-starter-webflux）：M1 起 web 容器，
+  # 以后加 REST 接口实现在线查看评测结果
+
+  # OpenAI 兼容自动配置：所有模型都是手写的（JudgeClientConfig），
+  # 但 starter 的自动配置仍要求 api-key 存在才不报错 —— 复用手写渠道的 key 喂它
+  ai:
+    openai:
+      api-key: ${qwen.api-key}
+      embedding:
+        enabled: false
+
+  # 主数据源：AgentCritic 自己的标准表（MySQL）
+  datasource:
+    url: jdbc:mysql://localhost:3306/agentic_critic?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 启动时自动执行 schema.sql 建表（幂等，IF NOT EXISTS）
+  sql:
+    init:
+      mode: always
+
+# ==================== 数据源：Travel-Hub（只读）====================
+# Ingestor 从这里拉取 llm_call_log，增量同步（只 insert，不删不 update）
+travel-hub:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/travel_hub
+    username: travel
+    password: travel123
+    driver-class-name: org.postgresql.Driver
+
+# ==================== 评测配置 ====================
+critic:
+  # 打分维度（多轮对话建议含「连贯性」）
+  dimensions: 忠实度,相关性,正确性,连贯性
+  # Ingestor 每批拉取条数
+  ingest-batch-size: 200
+
+
+logging:
+  level:
+    reactor.netty.http.client: DEBUG

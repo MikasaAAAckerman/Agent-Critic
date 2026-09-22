@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentCritic · 评测台</title>
+    <style>
+        :root {
+            --ink: #2c2416;
+            --ink-light: #6b5e4a;
+            --paper: #faf7f2;
+            --line: #d4ccc0;
+            --vermilion: #b5343a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Noto Serif SC", "Microsoft YaHei", serif;
+            background: #f5f0e8;
+            color: var(--ink);
+            padding: 24px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 20px; }
+        .header h1 { font-size: 24px; letter-spacing: 2px; }
+        .header .sub { color: var(--ink-light); font-size: 12px; letter-spacing: 3px; }
+
+        .card {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            box-shadow: 0 2px 10px rgba(44,36,22,0.06);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+        .card-title { font-size: 12px; color: var(--ink-light); letter-spacing: 3px; margin-bottom: 12px; }
+
+        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+        .group-item {
+            border: 1px solid var(--line); background: #fdfaf6;
+            padding: 12px 16px; cursor: pointer; transition: all .2s;
+        }
+        .group-item:hover { background: #f5efe8; }
+        .group-item.active { border-color: var(--vermilion); background: #fdf5f0; }
+        .group-item .g-name { font-size: 14px; font-weight: 600; }
+        .group-item .g-cnt { font-size: 11px; color: var(--ink-light); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
+        th { color: var(--ink-light); font-weight: 600; letter-spacing: 1px; }
+        .mono { font-family: Consolas, monospace; font-size: 11px; }
+        .clip { max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .pager { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12px; }
+        .btn {
+            border: 1px solid var(--line); background: #fdfaf6; color: var(--ink);
+            padding: 8px 20px; font-size: 12px; cursor: pointer; letter-spacing: 2px; transition: all .2s;
+        }
+        .btn:hover { background: #f5efe8; }
+        .btn-primary { background: var(--ink); color: #f7f3ed; border-color: var(--ink); }
+        .btn-primary:hover { background: var(--vermilion); border-color: var(--vermilion); }
+        .btn-danger { background: var(--vermilion); color: #fff; border-color: var(--vermilion); }
+        .btn-danger:hover { background: #9a2a2f; }
+        .btn:disabled { opacity: .4; cursor: not-allowed; }
+        .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+
+        #result-area { font-size: 12px; line-height: 1.8; word-break: break-all; }
+        .status-line { color: var(--vermilion); font-weight: 600; margin: 8px 0; }
+        .turn-block { border-left: 2px solid var(--line); padding: 6px 12px; margin: 6px 0; background: #fdfaf6; }
+        .turn-block .t-role { font-size: 11px; color: var(--ink-light); }
+        .score-num { font-weight: 700; color: var(--vermilion); }
+        .reason { color: var(--ink-light); font-size: 11px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>⚖️ AgentCritic · 评测台</h1>
+        <span class="sub">勾选多行 → 拼成多轮对话 → Judge 整体打分</span>
+    </div>
+
+    <div class="card">
+        <div class="card-title">— 数 据 分 组 —</div>
+        <div class="toolbar">
+            <button class="btn" id="ingest-btn">同 步 数 据</button>
+            <span class="mono" id="ingest-msg" style="color:var(--ink-light)"></span>
+        </div>
+        <div class="group-grid" id="group-grid"></div>
+    </div>
+
+    <div class="card" id="samples-card" style="display:none">
+        <div class="card-title">— 样 本（勾选后点「确 定」）—</div>
+        <div class="toolbar">
+            <button class="btn btn-primary" id="eval-btn" disabled>确 定 · 打 分</button>
+            <button class="btn btn-danger" id="stop-btn" disabled>停 止</button>
+            <span class="mono" id="sel-count" style="color:var(--ink-light)">已选 0 条</span>
+        </div>
+        <div style="overflow-x:auto">
+            <table>
+                <thead>
+                <tr>
+                    <th><input type="checkbox" id="check-all"></th>
+                    <th>id</th>
+                    <th>callId</th>
+                    <th>traceId</th>
+                    <th>type</th>
+                    <th>agent</th>
+                    <th>输入摘要</th>
+                </tr>
+                </thead>
+                <tbody id="sample-tbody"></tbody>
+            </table>
+        </div>
+        <div class="pager">
+            <button class="btn" id="prev-btn">上一页</button>
+            <span id="page-info" class="mono"></span>
+            <button class="btn" id="next-btn">下一页</button>
+        </div>
+    </div>
+
+    <div class="card" id="result-card" style="display:none">
+        <div class="card-title">— 评 测 结 果 —</div>
+        <div id="result-area"><span style="color:var(--ink-light)">等待评测…</span></div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8081';
+    let currentSource = null;
+    let currentPage = 1;
+    const pageSize = 20;
+    let totalPages = 0;
+    let selectedIds = new Set();
+    let abortController = null;   // 停止评测：中断 fetch 流
+    let currentRunId = null;
+
+    // ═══ 手动同步数据 ═══
+    async function syncData() {
+        const btn = document.getElementById('ingest-btn');
+        const msg = document.getElementById('ingest-msg');
+        btn.disabled = true;
+        msg.textContent = '同步中…';
+        try {
+            const res = await fetch(API + '/api/eval/ingest', { method: 'POST' });
+            const data = await res.json();
+            msg.textContent = `✅ 本次入库 ${data.inserted} 条`;
+            await loadSources();   // 刷新分组统计
+        } catch (e) {
+            msg.textContent = '❌ 同步失败: ' + e.message;
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ═══ 分组列表 ═══
+    async function loadSources() {
+        const res = await fetch(API + '/api/eval/sources');
+        const groups = await res.json();
+        const grid = document.getElementById('group-grid');
+        grid.innerHTML = '';
+        groups.forEach(g => {
+            const el = document.createElement('div');
+            el.className = 'group-item';
+            el.innerHTML = `<div class="g-name">${esc(g.source)}</div><div class="g-cnt">${g.cnt} 条</div>`;
+            el.onclick = () => selectSource(g.source);
+            grid.appendChild(el);
+        });
+    }
+
+    function selectSource(source) {
+        currentSource = source;
+        currentPage = 1;
+        document.querySelectorAll('.group-item').forEach(el => {
+            el.classList.toggle('active', el.querySelector('.g-name').textContent === source);
+        });
+        document.getElementById('samples-card').style.display = '';
+        loadSamples();
+    }
+
+    // ═══ 分页样本 ═══
+    async function loadSamples() {
+        const res = await fetch(`${API}/api/eval/samples?source=${encodeURIComponent(currentSource)}&page=${currentPage}&size=${pageSize}`);
+        const data = await res.json();
+        const tbody = document.getElementById('sample-tbody');
+        tbody.innerHTML = '';
+        data.items.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="checkbox" class="row-check" data-id="${s.id}"></td>
+                <td class="mono">${s.id}</td>
+                <td class="mono">${s.callId ?? ''}</td>
+                <td class="mono clip">${esc(s.traceId || '')}</td>
+                <td>${esc(s.callType || '')}</td>
+                <td>${esc(s.agentName || '')}</td>
+                <td class="clip">${esc((s.input || '').replace(/\n/g, ' ').slice(0, 80))}</td>`;
+            tbody.appendChild(tr);
+        });
+        totalPages = Math.max(1, Math.ceil(data.total / pageSize));
+        document.getElementById('page-info').textContent = `第 ${data.page} / ${totalPages} 页 · 共 ${data.total} 条`;
+        document.getElementById('prev-btn').disabled = currentPage <= 1;
+        document.getElementById('next-btn').disabled = currentPage >= totalPages;
+        bindRowChecks();
+        updateEvalBtn();
+    }
+
+    function bindRowChecks() {
+        document.querySelectorAll('.row-check').forEach(cb => {
+            cb.checked = selectedIds.has(Number(cb.dataset.id));
+            cb.onchange = () => {
+                const id = Number(cb.dataset.id);
+                cb.checked ? selectedIds.add(id) : selectedIds.delete(id);
+                updateEvalBtn();
+            };
+        });
+        document.getElementById('check-all').onchange = (e) => {
+            document.querySelectorAll('.row-check').forEach(cb => {
+                cb.checked = e.target.checked;
+                const id = Number(cb.dataset.id);
+                e.target.checked ? selectedIds.add(id) : selectedIds.delete(id);
+            });
+            updateEvalBtn();
+        };
+    }
+
+    function updateEvalBtn() {
+        document.getElementById('sel-count').textContent = `已选 ${selectedIds.size} 条`;
+        document.getElementById('eval-btn').disabled = selectedIds.size === 0 || abortController !== null;
+    }
+
+    // ═══ 打分（fetch 读 SSE 流，AbortController 支持停止）═══
+    async function startEval() {
+        if (selectedIds.size === 0) return;
+        currentRunId = null;
+        abortController = new AbortController();
+        document.getElementById('eval-btn').disabled = true;
+        document.getElementById('stop-btn').disabled = false;
+        document.getElementById('result-card').style.display = '';
+        const area = document.getElementById('result-area');
+        area.innerHTML = '<div class="status-line">⏳ Judge 正在评审这段对话…</div>';
+
+        try {
+            const resp = await fetch(API + '/api/eval/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: currentSource, ids: [...selectedIds] }),
+                signal: abortController.signal
+            });
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop();
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (t.startsWith('data:')) handleEvent(t.slice(5).trim());
+                }
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                area.innerHTML += '<div class="status-line">⏹ 已停止本次评测</div>';
+            } else {
+                area.innerHTML += `<div class="status-line">⚠️ 评测中断：${esc(e.message)}</div>`;
+            }
+        } finally {
+            abortController = null;
+            currentRunId = null;
+            document.getElementById('stop-btn').disabled = true;
+            updateEvalBtn();
+        }
+    }
+
+    function handleEvent(jsonStr) {
+        if (!jsonStr) return;
+        const area = document.getElementById('result-area');
+        let data;
+        try { data = JSON.parse(jsonStr); } catch (e) { return; }
+
+        if (data.status === 'started') {
+            currentRunId = data.runId;   // 拿到停止句柄
+            return;
+        }
+        if (data.error) {
+            area.innerHTML = `<div class="status-line">❌ ${esc(data.error)}</div>`;
+            return;
+        }
+        if (data.status === 'done') {
+            let html = '<div class="status-line">✅ 评测完成</div>';
+            html += '<div class="card-title">— 对 话 上 下 文 —</div>';
+            (data.turns || []).forEach((t, i) => {
+                html += `<div class="turn-block">
+                    <div class="t-role">第 ${i + 1} 轮 · ${esc(t.role)}</div>
+                    <div><b>输入：</b>${esc((t.input || '').slice(0, 400))}</div>
+                    <div><b>输出：</b>${esc((t.output || '').slice(0, 400))}</div>
+                </div>`;
+            });
+            html += '<div class="card-title">— 评 分 —</div><table>';
+            (data.scores || []).forEach(s => {
+                html += `<tr><td>${esc(s.dimension)}</td>
+                    <td class="score-num">${s.score}</td>
+                    <td class="reason">${esc(s.reason)}</td></tr>`;
+            });
+            html += '</table>';
+            area.innerHTML = html;
+        }
+    }
+
+    // ═══ 停止 ═══
+    async function stopEval() {
+        // 中断前端 fetch 流
+        if (abortController) abortController.abort();
+        // 通知后端（拿到 runId 才调，拿不到则前端断开后靠 dispose 兜底）
+        if (currentRunId) {
+            try {
+                await fetch(API + '/api/eval/run/' + currentRunId + '/stop', { method: 'POST' });
+            } catch (e) { /* ignore */ }
+        }
+    }
+
+    function esc(s) {
+        const d = document.createElement('div');
+        d.textContent = s || '';
+        return d.innerHTML;
+    }
+
+    document.getElementById('prev-btn').onclick = () => { if (currentPage > 1) { currentPage--; loadSamples(); } };
+    document.getElementById('next-btn').onclick = () => { if (currentPage < totalPages) { currentPage++; loadSamples(); } };
+    document.getElementById('eval-btn').onclick = startEval;
+    document.getElementById('stop-btn').onclick = stopEval;
+    document.getElementById('ingest-btn').onclick = syncData;
+
+    loadSources();
+</script>
+</body>
+</html>
