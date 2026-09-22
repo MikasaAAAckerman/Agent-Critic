@@ -15,7 +15,7 @@ import org.springframework.core.env.Environment;
 import java.util.Arrays;
 
 /**
- * 多渠道 ChatClient（复用 Travel-Hub 的模式）。
+ * 多渠道 ChatClient（yml 引用路径切换模型）。
  *
  * <p>底层各 provider（deepseek/qwen/dashscope/openrouter）在 yml 里声明各自的
  * models 映射表，角色通过「引用路径」{provider}.models.{modelKey} 动态绑定模型。

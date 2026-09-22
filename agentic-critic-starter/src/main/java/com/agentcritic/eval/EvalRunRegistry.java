@@ -10,7 +10,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 进行中的评测运行注册表（仿 Travel-Hub 的 AgentSessionRegistry）。
+ * 进行中的评测运行注册表。
  *
  * <p>runId → EvalRunSession，支撑「停止」：
  * <ul>

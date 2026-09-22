@@ -19,7 +19,7 @@ import java.util.Map;
 /**
  * 评测运行编排：一次 run = 勾选的多行拼成一段多轮对话 → 整体打分 → 推结果。
  *
- * <p>协作式取消（复用 Travel-Hub 已验证的模式）：
+ * <p>协作式取消：
  * <ul>
  *   <li>打分前检查 cancelled —— 命中则不发起 Judge 调用</li>
  *   <li>dispose() 掐 SSE 流 —— 页面立即关闭</li>

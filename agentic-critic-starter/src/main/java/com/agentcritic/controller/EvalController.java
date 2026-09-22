@@ -45,7 +45,7 @@ public class EvalController {
         this.ingestor = ingestor;
     }
 
-    /** 手动触发数据同步（拉 Travel-Hub llm_call_log 增量入标准表） */
+    /** 手动触发数据同步（增量拉取外部 LLM 调用日志入标准表） */
     @PostMapping("/ingest")
     public Map<String, Object> ingest() {
         int inserted = ingestor.sync();

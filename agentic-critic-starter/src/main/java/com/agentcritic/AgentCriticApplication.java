@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * AgentCritic —— 给 LLM 应用装「裁判」。
  *
- * <p>M1 最小闭环：Ingestor 读 Travel-Hub llm_call_log → 标准表 → Evaluator 取样本
+ * <p>M1 最小闭环：Ingestor 拉取外部 LLM 调用日志 → 标准表 → Evaluator 取样本
  * → LLMJudge 打分 → Markdown 报告。
  */
 @Slf4j
