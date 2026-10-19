@@ -2,19 +2,18 @@
 
 > 给 LLM 应用装「裁判」——让 AI 效果从拍脑袋变成可量化、可对比、可回归的工程问题。
 
-**配套项目**：[Agentic-Travel-Hub](https://github.com/MikasaAAAckerman)（造 Agent 的引擎）→ **AgentCritic**（评 Agent 的裁判）
+**配套项目**：[Agentic-Travel-Hub](https://github.com/MikasaAAAckerman/Agentic-Travel-Hub)（造 Agent 的引擎）→ **AgentCritic**（评 Agent 的裁判）
 
 ---
 
 ## 为什么做这个项目
 
-AI 应用开发中，「效果好不好」长期停留在**手动测几个 case、凭感觉**的阶段。三个真实痛点：
+AI 应用开发中，「效果好不好」长期停留在**手动测几个 case、凭感觉**的阶段。两个真实痛点：
 
 | # | 痛点 | 现状 |
 |---|------|------|
 | 1 | 改了 Prompt / 换了模型，效果变好还是变差？ | 没有客观答案 |
 | 2 | RAG 命中质量、工具调用准确率、多步任务成功率 | 拿不出数字 |
-| 3 | 被问「你项目效果怎么评估」 | 答不上来体系化方法 |
 
 **AgentCritic 的目标：让 LLM 应用的效果「可量化、可对比、可回归」。**
 
@@ -33,23 +32,9 @@ AI 应用开发中，「效果好不好」长期停留在**手动测几个 case�
 
 ## 架构
 
-```
-生产方（Travel-Hub / SillyTavern / ...）
-   │  Ingestor 适配器（ETL：抽取 → 清洗 → 标准格式）
-   ▼
-标准数据契约（四层表）← AgentCritic 唯一的数据依赖
-   │  统一 SELECT 一轮对话的 input & output
-   ▼
-评测引擎（Evaluator）
-   │
-   ▼
-三态 Judge（LLMJudge / RuleJudge / MetricJudge）
-   │
-   ▼
-报告 + 回归对比
-```
+![AgentCritic 架构图](设计文档/mermaid-drawing.png)
 
-详细设计见 [设计文档](设计文档/)（架构图 / 设计流程文档 / 设计草稿与选型）。
+详细设计见 [设计文档](设计文档/)（架构设计思路 / 全量化指标）。
 
 ## 快速开始（M1 规划）
 

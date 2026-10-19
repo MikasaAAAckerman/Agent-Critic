@@ -45,12 +45,9 @@ public class EvalRunService {
      * 启动一次评测运行，返回 SSE 流（注册进 registry 以便停止）。
      */
     public Flux<String> run(String source, List<Long> ids) {
-        // ⚠️ 用 replay(1) 而不是 unicast：unicast 在订阅者出现前 emit 会被丢弃
-        //    （started 事件在框架订阅 sink 之前就发了，unicast 会丢它 → runId 拿不到 → 停止失效）
         Sinks.Many<String> sink = Sinks.many().replay().latest();
         String runId = registry.register(sink);
 
-        // 先推 started 事件（带 runId）—— 前端靠它拿到停止句柄（replay 会缓存给订阅者）
         sink.tryEmitNext(JSON.toJSONString(Map.of("runId", runId, "status", "started")));
 
         // 打分放独立线程，避免阻塞 WebFlux 事件循环
@@ -80,8 +77,6 @@ public class EvalRunService {
                     return Flux.empty();
                 })
                 .doOnError(e -> {
-                    // ⚠️ 必须把异常对象传给 logback（最后参数）才能看到完整堆栈；
-                    // printStackTrace 走 System.err，绕过 logback 看不到
                     log.error("[EvalRun] 打分异常 | runId={}", runId, e);
                     if (sink.currentSubscriberCount() > 0) {
                         sink.tryEmitNext("{\"error\":\"" + e.getMessage() + "\"}");

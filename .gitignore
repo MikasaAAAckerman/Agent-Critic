@@ -21,6 +21,9 @@ application-local.yml
 application-prod.yml
 application-test.yml
 
+# ============ 个人草稿：不提交 ============
+设计文档/不提交的/
+
 # ============ 运行产物 ============
 report/
 logs/
